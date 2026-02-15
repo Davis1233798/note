@@ -1,0 +1,141 @@
+name: Deploy to Oracle VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  APP_DIR: /opt/note-app
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ===== Frontend Build =====
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # ===== Backend Build =====
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Build backend (release)
+        run: cargo build --release
+        working-directory: backend
+
+      # ===== Upload Artifacts =====
+      - name: Prepare deployment package
+        run: |
+          mkdir -p deploy-package/static
+          cp backend/target/release/backend deploy-package/backend
+          cp -r frontend/dist/* deploy-package/static/
+          cp -r deploy/ deploy-package/deploy/
+          chmod +x deploy-package/backend
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy-package/
+          retention-days: 3
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-package
+          path: deploy-package/
+
+      - name: Deploy to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          source: "deploy-package/*"
+          target: "/tmp/note-app-deploy"
+          strip_components: 1
+
+      - name: Execute deployment on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+
+            APP_DIR=/opt/note-app
+            DEPLOY_SRC=/tmp/note-app-deploy
+
+            # 首次部署：執行初始化
+            if [ ! -f /etc/systemd/system/note-app.service ]; then
+              echo "🔧 First-time setup..."
+              sudo mkdir -p $APP_DIR/static
+              sudo cp $DEPLOY_SRC/deploy/note-app.service /etc/systemd/system/
+              sudo cp $DEPLOY_SRC/deploy/nginx.conf /etc/nginx/sites-available/note-app
+              sudo ln -sf /etc/nginx/sites-available/note-app /etc/nginx/sites-enabled/note-app
+              sudo rm -f /etc/nginx/sites-enabled/default
+              sudo systemctl daemon-reload
+              sudo systemctl enable note-app
+              sudo nginx -t && sudo systemctl reload nginx
+            fi
+
+            # 部署新版本
+            echo "🚀 Deploying..."
+            sudo systemctl stop note-app || true
+            sudo cp $DEPLOY_SRC/backend $APP_DIR/backend
+            sudo chmod +x $APP_DIR/backend
+            sudo rm -rf $APP_DIR/static/*
+            sudo cp -r $DEPLOY_SRC/static/* $APP_DIR/static/
+
+            # 寫入環境變數
+            sudo tee $APP_DIR/.env > /dev/null <<EOF
+            PORT=8080
+            EOF
+
+            sudo systemctl start note-app
+
+            # 等待服務啟動並檢查
+            sleep 2
+            if sudo systemctl is-active --quiet note-app; then
+              echo "✅ Deployment successful!"
+            else
+              echo "❌ Service failed to start"
+              sudo journalctl -u note-app --no-pager -n 20
+              exit 1
+            fi
+
+            # 清理
+            rm -rf $DEPLOY_SRC

@@ -1,0 +1,39 @@
+﻿
+> frontend@0.0.0 dev
+> vite
+
+node.exe : [31merror 
+when starting dev serv
+er:
+位於 C:\Program Files\no
+dejs\npm.ps1:29 字元:3
++   & $NODE_EXE $NPM_C
+LI_JS $args
++   ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: ([31merror   
+  when starting de    
+v server::String)     
+[], RemoteExcept    io
+n
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+Error: listen EACCES: 
+permission denied ::1:
+5173
+    at Server.setupLis
+tenHandle [as _listen2
+] (node:net:1917:21)
+    at listenInCluster
+ (node:net:1996:12)
+    at GetAddrInfoReqW
+rap.callback (node:net
+:2205:7)
+    at GetAddrInfoReqW
+rap.onlookupall [as on
+complete] (node:dns:13
+4:8)[39m
