@@ -289,7 +289,16 @@ export async function fetchNotesWithAttempts(client: SupabaseClient) {
     `)
         .order('updated_at', { ascending: false });
     if (error) throw error;
-    return data as (Note & { attempts: Attempt[] })[];
+
+    // Sort attempts by created_at ascending ensures last element is the latest
+    const sortedData = data?.map(note => ({
+        ...note,
+        attempts: (note.attempts as Attempt[] || []).sort((a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+    }));
+
+    return sortedData as (Note & { attempts: Attempt[] })[];
 }
 
 export async function fetchNoteContent(client: SupabaseClient, id: string) {

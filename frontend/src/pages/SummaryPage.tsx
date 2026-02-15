@@ -96,7 +96,7 @@ export default function SummaryPage() {
     }
 
     return (
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+        <div className="p-4 lg:p-8 w-full max-w-[1920px] mx-auto space-y-8 animate-fade-in">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-white mb-2">總覽 Dashboard</h1>
@@ -160,6 +160,7 @@ export default function SummaryPage() {
                             <tr>
                                 <th className="px-6 py-3">標題 / 題目</th>
                                 <th className="px-6 py-3 text-center">狀態</th>
+                                <th className="px-6 py-3">錯誤備註</th>
                                 <th className="px-6 py-3 text-center">最後練習</th>
                                 <th className="px-6 py-3 text-right">操作</th>
                             </tr>
@@ -173,6 +174,7 @@ export default function SummaryPage() {
                                 </tr>
                             ) : (
                                 filteredNotes.map(note => {
+                                    const lastAttempt = note.attempts[note.attempts.length - 1];
                                     const correctCount = note.attempts.filter(a => a.is_correct).length;
                                     return (
                                         <tr key={note.id} className="hover:bg-surface-800/30 transition-colors group">
@@ -198,6 +200,9 @@ export default function SummaryPage() {
                                                         />
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-red-300 max-w-xs truncate" title={lastAttempt?.error_content || ''}>
+                                                {lastAttempt && !lastAttempt.is_correct ? (lastAttempt.error_content || '-') : ''}
                                             </td>
                                             <td className="px-6 py-4 text-center text-surface-500 text-xs">
                                                 {note.attempts.length > 0 ? (
@@ -247,6 +252,11 @@ export default function SummaryPage() {
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
+                                {note.attempts.length > 0 && !note.attempts[note.attempts.length - 1].is_correct && note.attempts[note.attempts.length - 1].error_content && (
+                                    <div className="text-xs text-red-300 bg-red-500/10 p-2 rounded truncate">
+                                        錯誤: {note.attempts[note.attempts.length - 1].error_content}
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-between text-xs text-surface-400">
                                     <div className="flex items-center gap-3">
                                         <Link to={`/notes/${note.id}`} className="flex items-center gap-1 text-primary-400 font-medium">
