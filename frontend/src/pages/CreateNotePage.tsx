@@ -12,6 +12,7 @@ export default function CreateNotePage() {
     const [title, setTitle] = useState('');
     const [question, setQuestion] = useState('');
     const [standardAnswer, setStandardAnswer] = useState('');
+    const [keyPoints, setKeyPoints] = useState('');
 
     // First attempt fields
     const [attemptAnswer, setAttemptAnswer] = useState('');
@@ -45,7 +46,8 @@ export default function CreateNotePage() {
                 title.trim(),
                 question.trim(),
                 standardAnswer.trim(),
-                userId
+                userId,
+                keyPoints.trim()
             );
 
             // 2. Create First Attempt
@@ -126,6 +128,20 @@ export default function CreateNotePage() {
                                 className="input-field font-mono text-sm leading-relaxed"
                                 rows={6}
                                 required
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="keyPoints" className="block text-sm font-medium text-surface-300 mb-2">
+                                題目重點 (Key Points)
+                            </label>
+                            <textarea
+                                id="keyPoints"
+                                placeholder="例如：使用 JOIN 語法、注意 NULL 判斷..."
+                                value={keyPoints}
+                                onChange={e => setKeyPoints(e.target.value)}
+                                className="input-field font-mono text-sm leading-relaxed"
+                                rows={2}
                             />
                         </div>
                     </div>

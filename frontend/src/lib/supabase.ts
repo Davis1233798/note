@@ -21,7 +21,8 @@ export interface Note {
     user_id: string;
     title: string;
     question: string;
-    standard_answer: string | null; // [NEW] 標準答案
+    standard_answer: string | null;
+    key_points: string | null; // [NEW] 題目重點
     created_at: string;
     updated_at: string;
 }
@@ -188,13 +189,14 @@ export async function fetchNote(client: SupabaseClient, id: string) {
     return data as Note;
 }
 
-export async function createNote(client: SupabaseClient, title: string, question: string, standardAnswer: string, userId: string) {
+export async function createNote(client: SupabaseClient, title: string, question: string, standardAnswer: string, userId: string, keyPoints: string) {
     const { data, error } = await client
         .from('notes')
         .insert({
             title,
             question,
-            standard_answer: standardAnswer, // [NEW]
+            standard_answer: standardAnswer,
+            key_points: keyPoints, // [NEW]
             user_id: userId
         })
         .select()
@@ -203,7 +205,7 @@ export async function createNote(client: SupabaseClient, title: string, question
     return data as Note;
 }
 
-export async function updateNote(client: SupabaseClient, id: string, updates: Partial<Pick<Note, 'title' | 'question' | 'standard_answer'>>) {
+export async function updateNote(client: SupabaseClient, id: string, updates: Partial<Pick<Note, 'title' | 'question' | 'standard_answer' | 'key_points'>>) {
     const { data, error } = await client
         .from('notes')
         .update({ ...updates, updated_at: new Date().toISOString() })
@@ -328,10 +330,15 @@ CREATE TABLE IF NOT EXISTS notes (
     user_id TEXT NOT NULL,
     title TEXT NOT NULL,
     question TEXT NOT NULL,
-    standard_answer TEXT, -- [NEW] 標準答案
+    standard_answer TEXT,
+    key_points TEXT, -- [NEW] 題目重點
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 如果表已存在，嘗試新增欄位 (for migration)
+-- Note: Supabase SQL Editor doesn't support IF NOT EXISTS for ADD COLUMN easily without DO block
+-- 使用者請手動執行: ALTER TABLE notes ADD COLUMN IF NOT EXISTS key_points TEXT;
 
 -- 建立 attempts 表
 CREATE TABLE IF NOT EXISTS attempts (

@@ -184,7 +184,7 @@ export default function SummaryPage() {
                                                         {note.title}
                                                     </p>
                                                     <p className="text-surface-500 truncate mt-0.5 max-w-xs">
-                                                        {note.question}
+                                                        {note.key_points || note.question}
                                                     </p>
                                                 </Link>
                                             </td>
@@ -246,7 +246,7 @@ export default function SummaryPage() {
                                         <Link to={`/notes/${note.id}`} className="font-semibold text-white hover:text-primary-300 block truncate">
                                             {note.title}
                                         </Link>
-                                        <p className="text-sm text-surface-500 mt-0.5 line-clamp-2">{note.question}</p>
+                                        <p className="text-sm text-surface-500 mt-0.5 line-clamp-2">{note.key_points || note.question}</p>
                                     </div>
                                     <button onClick={() => handleDelete(note.id)} className="text-surface-500 hover:text-red-400 p-1 shrink-0">
                                         <Trash2 size={16} />
