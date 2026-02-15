@@ -35,24 +35,29 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      # ===== Backend Build =====
+      # ===== Backend Build (musl 靜態連結，相容 Ubuntu 20.04) =====
+      - name: Install musl tools
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
 
-      - name: Build backend (release)
-        run: cargo build --release
+      - name: Build backend (release, static musl)
+        run: cargo build --release --target x86_64-unknown-linux-musl
         working-directory: backend
 
       # ===== Upload Artifacts =====
       - name: Prepare deployment package
         run: |
           mkdir -p deploy-package/static
-          cp backend/target/release/backend deploy-package/backend
+          cp backend/target/x86_64-unknown-linux-musl/release/backend deploy-package/backend
           cp -r frontend/dist/* deploy-package/static/
           cp -r deploy/ deploy-package/deploy/
           chmod +x deploy-package/backend
