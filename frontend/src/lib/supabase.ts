@@ -125,32 +125,6 @@ export async function saveUserSettings(supabaseUrl: string, supabaseAnonKey: str
     return data;
 }
 
-// ===== 使用者資料庫初始化（在使用者的 Supabase 中建表）=====
-
-const INIT_SQL_NOTES = `
-CREATE TABLE IF NOT EXISTS notes (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    question TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-`;
-
-const INIT_SQL_ATTEMPTS = `
-CREATE TABLE IF NOT EXISTS attempts (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
-    attempt_number INTEGER NOT NULL,
-    answer_content TEXT NOT NULL,
-    is_correct BOOLEAN DEFAULT false,
-    correction TEXT,
-    error_content TEXT,
-    usecase TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-`;
 
 /** 測試使用者的 Supabase 連線是否正常 */
 export async function testConnection(url: string, anonKey: string): Promise<{ ok: boolean; error?: string }> {

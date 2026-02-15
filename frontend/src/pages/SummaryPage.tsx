@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUserDatabase } from '../lib/UserDatabaseContext';
 import { fetchNotesWithAttempts, createNote, deleteNote, type Note, type Attempt } from '../lib/supabase';
-import { Plus, FileText, ExternalLink, Trash2, Search, AlertTriangle, CheckCircle2, XCircle, Loader2, Settings } from 'lucide-react';
+import { Plus, FileText, ExternalLink, Trash2, Search, AlertTriangle, CheckCircle2, XCircle, Settings } from 'lucide-react';
 
 export default function SummaryPage() {
     const navigate = useNavigate();
