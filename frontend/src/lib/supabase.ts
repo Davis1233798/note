@@ -21,6 +21,7 @@ export interface Note {
     user_id: string;
     title: string;
     question: string;
+    standard_answer: string | null; // [NEW] 標準答案
     created_at: string;
     updated_at: string;
 }
@@ -187,17 +188,22 @@ export async function fetchNote(client: SupabaseClient, id: string) {
     return data as Note;
 }
 
-export async function createNote(client: SupabaseClient, title: string, question: string, userId: string) {
+export async function createNote(client: SupabaseClient, title: string, question: string, standardAnswer: string, userId: string) {
     const { data, error } = await client
         .from('notes')
-        .insert({ title, question, user_id: userId })
+        .insert({
+            title,
+            question,
+            standard_answer: standardAnswer, // [NEW]
+            user_id: userId
+        })
         .select()
         .single();
     if (error) throw error;
     return data as Note;
 }
 
-export async function updateNote(client: SupabaseClient, id: string, updates: Partial<Pick<Note, 'title' | 'question'>>) {
+export async function updateNote(client: SupabaseClient, id: string, updates: Partial<Pick<Note, 'title' | 'question' | 'standard_answer'>>) {
     const { data, error } = await client
         .from('notes')
         .update({ ...updates, updated_at: new Date().toISOString() })
@@ -295,6 +301,7 @@ CREATE TABLE IF NOT EXISTS notes (
     user_id TEXT NOT NULL,
     title TEXT NOT NULL,
     question TEXT NOT NULL,
+    standard_answer TEXT, -- [NEW] 標準答案
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );

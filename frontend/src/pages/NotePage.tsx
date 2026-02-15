@@ -23,6 +23,7 @@ export default function NotePage() {
     const [editingNote, setEditingNote] = useState(false);
     const [editTitle, setEditTitle] = useState('');
     const [editQuestion, setEditQuestion] = useState('');
+    const [editStandardAnswer, setEditStandardAnswer] = useState('');
     const [saving, setSaving] = useState(false);
 
     // New attempt form
@@ -62,6 +63,7 @@ export default function NotePage() {
             setAttempts(attemptsData);
             setEditTitle(noteData.title);
             setEditQuestion(noteData.question);
+            setEditStandardAnswer(noteData.standard_answer || '');
         } catch (err) {
             console.error('Failed to load note:', err);
         } finally {
@@ -73,7 +75,11 @@ export default function NotePage() {
         if (!id || !editTitle.trim() || !editQuestion.trim() || !userClient) return;
         setSaving(true);
         try {
-            const updated = await updateNote(userClient, id, { title: editTitle.trim(), question: editQuestion.trim() });
+            const updated = await updateNote(userClient, id, {
+                title: editTitle.trim(),
+                question: editQuestion.trim(),
+                standard_answer: editStandardAnswer.trim()
+            });
             setNote(updated);
             setEditingNote(false);
         } catch (err) {
@@ -173,7 +179,7 @@ export default function NotePage() {
 
     if (!note) {
         return (
-            <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 py-12 text-center">
+            <div className="w-full px-6 lg:px-10 py-12 text-center">
                 <h2 className="text-xl font-semibold text-surface-300">找不到這份筆記</h2>
                 <button onClick={() => navigate('/')} className="btn-primary mt-4">
                     <ArrowLeft size={16} /> 返回總表
@@ -183,7 +189,7 @@ export default function NotePage() {
     }
 
     return (
-        <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 py-8">
+        <div className="w-full px-6 lg:px-10 py-8">
             {/* Back button */}
             <button
                 onClick={() => navigate('/')}
@@ -213,6 +219,14 @@ export default function NotePage() {
                             placeholder="題目內容"
                             rows={4}
                         />
+                        <textarea
+                            id="edit-note-standard-answer"
+                            value={editStandardAnswer}
+                            onChange={e => setEditStandardAnswer(e.target.value)}
+                            className="input-field font-mono text-sm"
+                            placeholder="標準答案 (SQL)"
+                            rows={3}
+                        />
                         <div className="flex gap-3 justify-end">
                             <button onClick={() => setEditingNote(false)} className="btn-secondary">取消</button>
                             <button onClick={handleSaveNote} disabled={saving} className="btn-primary">
@@ -239,6 +253,16 @@ export default function NotePage() {
                             </div>
                             <p className="text-surface-200 whitespace-pre-wrap leading-relaxed">{note.question}</p>
                         </div>
+
+                        {note.standard_answer && (
+                            <div className="p-4 rounded-xl bg-surface-900/50 border border-surface-700/30 mt-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <CheckCircle2 size={14} className="text-emerald-400" />
+                                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">標準答案</span>
+                                </div>
+                                <code className="block text-emerald-300 whitespace-pre-wrap text-sm font-mono">{note.standard_answer}</code>
+                            </div>
+                        )}
                         <div className="flex items-center gap-4 mt-4 text-sm text-surface-500">
                             <span>建立：{new Date(note.created_at).toLocaleDateString('zh-TW')}</span>
                             <span>更新：{new Date(note.updated_at).toLocaleDateString('zh-TW')}</span>

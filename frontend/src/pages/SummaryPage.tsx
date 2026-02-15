@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUserDatabase } from '../lib/UserDatabaseContext';
-import { fetchNotesWithAttempts, createNote, deleteNote, type Note, type Attempt } from '../lib/supabase';
+import { fetchNotesWithAttempts, deleteNote, type Note, type Attempt } from '../lib/supabase';
 import { Plus, FileText, ExternalLink, Trash2, Search, AlertTriangle, CheckCircle2, XCircle, Settings } from 'lucide-react';
 
 export default function SummaryPage() {
     const navigate = useNavigate();
-    const { status, userClient, userId } = useUserDatabase();
+    const { status, userClient } = useUserDatabase();
     const [notes, setNotes] = useState<(Note & { attempts: Attempt[] })[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [showNewNote, setShowNewNote] = useState(false);
-    const [newTitle, setNewTitle] = useState('');
-    const [newQuestion, setNewQuestion] = useState('');
-    const [creating, setCreating] = useState(false);
 
     useEffect(() => {
         if (status === 'needs_setup') {
@@ -39,21 +35,8 @@ export default function SummaryPage() {
         }
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newTitle.trim() || !newQuestion.trim() || !userClient || !userId) return;
-        setCreating(true);
-        try {
-            await createNote(userClient, newTitle.trim(), newQuestion.trim(), userId);
-            setNewTitle('');
-            setNewQuestion('');
-            setShowNewNote(false);
-            await loadNotes();
-        } catch (err) {
-            console.error('Failed to create note:', err);
-        } finally {
-            setCreating(false);
-        }
+    const handleCreate = () => {
+        navigate('/new');
     };
 
     const handleDelete = async (id: string) => {
@@ -111,7 +94,7 @@ export default function SummaryPage() {
     }
 
     return (
-        <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 py-8">
+        <div className="w-full px-6 lg:px-10 py-8">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 animate-fade-in">
                 <div>
@@ -121,7 +104,7 @@ export default function SummaryPage() {
                     </p>
                 </div>
                 <button
-                    onClick={() => setShowNewNote(!showNewNote)}
+                    onClick={handleCreate}
                     className="btn-primary"
                     id="new-note-btn"
                 >
@@ -129,40 +112,6 @@ export default function SummaryPage() {
                     新增筆記
                 </button>
             </div>
-
-            {/* New Note Form */}
-            {showNewNote && (
-                <div className="glass-card p-6 mb-6 animate-slide-up">
-                    <h3 className="text-lg font-semibold text-white mb-4">建立新筆記</h3>
-                    <form onSubmit={handleCreate} className="flex flex-col gap-4">
-                        <input
-                            id="note-title-input"
-                            type="text"
-                            placeholder="筆記標題"
-                            value={newTitle}
-                            onChange={e => setNewTitle(e.target.value)}
-                            className="input-field"
-                            required
-                        />
-                        <textarea
-                            id="note-question-input"
-                            placeholder="題目內容"
-                            value={newQuestion}
-                            onChange={e => setNewQuestion(e.target.value)}
-                            className="input-field"
-                            required
-                        />
-                        <div className="flex gap-3 justify-end">
-                            <button type="button" onClick={() => setShowNewNote(false)} className="btn-secondary">
-                                取消
-                            </button>
-                            <button type="submit" disabled={creating} className="btn-primary" id="create-note-btn">
-                                {creating ? '建立中...' : '建立筆記'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
 
             {/* Search Bar */}
             <div className="relative mb-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>

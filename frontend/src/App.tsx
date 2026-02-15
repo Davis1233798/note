@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
 import SummaryPage from './pages/SummaryPage';
 import NotePage from './pages/NotePage';
+import CreateNotePage from './pages/CreateNotePage';
+import GuidePage from './pages/GuidePage'; // [NEW] // [NEW]
 
 export default function App() {
     return (
@@ -17,6 +19,7 @@ export default function App() {
                     <main className="flex-1">
                         <Routes>
                             <Route path="/login" element={<LoginPage />} />
+                            <Route path="/guide" element={<GuidePage />} />
                             <Route
                                 path="/setup"
                                 element={
@@ -30,6 +33,14 @@ export default function App() {
                                 element={
                                     <ProtectedRoute>
                                         <SummaryPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/new"
+                                element={
+                                    <ProtectedRoute>
+                                        <CreateNotePage />
                                     </ProtectedRoute>
                                 }
                             />

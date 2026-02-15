@@ -95,6 +95,34 @@ CREATE POLICY "Users manage own attempts" ON attempts
 ```
 
 4. 確認看到 **「Success. No rows returned」** 表示建立成功
+5. **重要：** 為了支援多使用者架構，請**另外**執行以下 SQL 來建立 `user_settings` 表（用於儲存使用者的 Supabase 連線資訊）：
+
+```sql
+-- ===== 建立 user_settings 表 (共享資料庫用) =====
+create table user_settings (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null unique,
+  supabase_url text not null,
+  supabase_anon_key text not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ===== 啟用 RLS =====
+alter table user_settings enable row level security;
+
+-- ===== 設定存取權限 =====
+-- 允許使用者讀取自己的設定
+create policy "Users can view own settings" on user_settings
+  for select using (auth.uid() = user_id);
+
+-- 允許使用者新增/更新自己的設定
+create policy "Users can insert own settings" on user_settings
+  for insert with check (auth.uid() = user_id);
+
+create policy "Users can update own settings" on user_settings
+  for update using (auth.uid() = user_id);
+```
 
 ---
 
