@@ -1,0 +1,25 @@
+﻿cargo :     Checking b
+ackend v0.1.0 (C:\User
+s\solidityDeveloper\ru
+st_projects\note\backe
+nd)
+位於 線路:1 字元:1
++ cargo check 2>&1 | O
+ut-File -FilePath chec
+k_output2.txt -Encodin
+g utf ...
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (    Checki   
+ ng ba...s\note\ba    
+ckend):String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+    Finished `dev` pro
+file [unoptimized + de
+buginfo] target(s) in 
+0.19s

@@ -1,0 +1,52 @@
+﻿cargo : warning: unuse
+d imports: `HeaderValu
+e`, `Html`, `StatusCod
+e`, and `extract::Requ
+est`
+位於 線路:1 字元:1
++ cargo check 2>&1 | O
+ut-File -FilePath chec
+k_output.txt -Encoding
+ utf8
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (warning: u   
+ nused...tract::Re    
+quest`:String) []    ,
+ RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+ --> src\main.rs:2:5
+  |
+2 |     extract::Reque
+st,
+  |     ^^^^^^^^^^^^^^
+^^
+3 |     http::{HeaderV
+alue, Method, StatusCo
+de},
+  |            ^^^^^^^
+^^^^          ^^^^^^^^
+^^
+4 |     response::{Htm
+l, IntoResponse, Json}
+,
+  |                ^^^
+^
+  |
+  = note: `#[warn(unus
+ed_imports)]` on by de
+fault
+
+warning: `backend` (bi
+n "backend") generated
+ 1 warning (run `cargo
+ fix --bin "backend"` 
+to apply 1 suggestion)
+    Finished `dev` pro
+file [unoptimized + de
+buginfo] target(s) in 
+0.07s

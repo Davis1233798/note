@@ -1,0 +1,23 @@
+# Rust
+backend/target/
+backend/check.log
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/build.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
