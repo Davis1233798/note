@@ -133,8 +133,8 @@ jobs:
             sudo systemctl reset-failed note-app || true
             sleep 1
 
-            # 殺掉仍佔用 port 8081 的 process
-            sudo fuser -k 8081/tcp 2>/dev/null || true
+            # 殺掉仍佔用 port 8082 的 process
+            sudo fuser -k 8082/tcp 2>/dev/null || true
             sleep 1
 
             # 部署新版本
@@ -146,7 +146,7 @@ jobs:
 
             # 寫入環境變數
             sudo tee $APP_DIR/.env > /dev/null <<EOF
-            PORT=8081
+            PORT=8082
             EOF
 
             sudo systemctl start note-app
@@ -155,7 +155,7 @@ jobs:
             sleep 3
             if sudo systemctl is-active --quiet note-app; then
               echo "✅ Deployment successful!"
-              curl -sf http://localhost:8081/api/health && echo " - Health check passed" || true
+              curl -sf http://localhost:8082/api/health && echo " - Health check passed" || true
             else
               echo "❌ Service failed to start"
               sudo journalctl -u note-app --no-pager -n 30
