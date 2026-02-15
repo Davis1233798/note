@@ -1,66 +1,58 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUserDatabase } from '../lib/UserDatabaseContext';
-import {
-    fetchNote, updateNote, fetchAttempts, createAttempt, updateAttempt, deleteAttempt,
-    type Note, type Attempt,
-} from '../lib/supabase';
-import {
-    ArrowLeft, Save, Plus, CheckCircle2, XCircle, Trash2, Edit3,
-    ChevronDown, ChevronUp, BookOpen, Settings,
-} from 'lucide-react';
+import { fetchNoteContent, createAttempt, updateNote, deleteAttempt, type Note, type Attempt } from '../lib/supabase';
+import { ArrowLeft, Send, Save, Trash2, CheckCircle2, XCircle, Clock, AlertTriangle, Play, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function NotePage() {
-    const { id } = useParams<{ id: string }>();
+    const { id } = useParams();
     const navigate = useNavigate();
     const { status, userClient } = useUserDatabase();
 
+    // Data state
     const [note, setNote] = useState<Note | null>(null);
     const [attempts, setAttempts] = useState<Attempt[]>([]);
-    const [loading, setLoading] = useState(true);
 
-    // Note editing
+    // UI state
+    const [loading, setLoading] = useState(true);
     const [editingNote, setEditingNote] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Edit Note fields
     const [editTitle, setEditTitle] = useState('');
     const [editQuestion, setEditQuestion] = useState('');
     const [editStandardAnswer, setEditStandardAnswer] = useState('');
-    const [saving, setSaving] = useState(false);
 
-    // New attempt form
-    const [showNewAttempt, setShowNewAttempt] = useState(false);
+    // New Attempt fields
     const [newAnswer, setNewAnswer] = useState('');
     const [newIsCorrect, setNewIsCorrect] = useState(true);
-    const [newCorrection, setNewCorrection] = useState('');
     const [newError, setNewError] = useState('');
-    const [newUsecase, setNewUsecase] = useState('');
-    const [creatingAttempt, setCreatingAttempt] = useState(false);
+    // const [newCorrection, setNewCorrection] = useState(''); // Hidden optional
+    // const [newUsecase, setNewUsecase] = useState(''); // Hidden optional
 
-    // Expanded attempts
-    const [expandedAttempt, setExpandedAttempt] = useState<string | null>(null);
-
-    // Editing attempt
-    const [editingAttemptId, setEditingAttemptId] = useState<string | null>(null);
-    const [editAttemptData, setEditAttemptData] = useState<Partial<Attempt>>({});
+    // Refs for scrolling
+    const attemptsEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (status === 'needs_setup') {
-            navigate('/setup');
+        if (status === 'connected' && userClient && id) {
+            loadData();
         }
-    }, [status, navigate]);
+    }, [status, userClient, id]);
 
+    // Scroll to bottom of attempts when added
     useEffect(() => {
-        if (id && status === 'connected' && userClient) loadData(id);
-    }, [id, status, userClient]);
+        attemptsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [attempts]);
 
-    const loadData = async (noteId: string) => {
-        if (!userClient) return;
+    const loadData = async () => {
+        if (!userClient || !id) return;
         try {
-            const [noteData, attemptsData] = await Promise.all([
-                fetchNote(userClient, noteId),
-                fetchAttempts(userClient, noteId),
-            ]);
+            const { note: noteData, attempts: attemptsData } = await fetchNoteContent(userClient, id);
             setNote(noteData);
             setAttempts(attemptsData);
+
+            // Init edit state
             setEditTitle(noteData.title);
             setEditQuestion(noteData.question);
             setEditStandardAnswer(noteData.standard_answer || '');
@@ -84,468 +76,278 @@ export default function NotePage() {
             setEditingNote(false);
         } catch (err) {
             console.error('Failed to update note:', err);
+            alert('更新失敗');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleCreateAttempt = async (e: React.FormEvent) => {
+    const handleSubmitAttempt = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!id || !newAnswer.trim() || !userClient) return;
-        setCreatingAttempt(true);
+
+        setSubmitting(true);
         try {
-            const attemptNumber = attempts.length + 1;
-            await createAttempt(
+            const nextAttemptNumber = attempts.length + 1;
+            const attempt = await createAttempt(
                 userClient,
                 id,
-                attemptNumber,
+                nextAttemptNumber,
                 newAnswer.trim(),
                 newIsCorrect,
-                newIsCorrect ? undefined : newCorrection.trim(),
+                undefined, // correction
                 newIsCorrect ? undefined : newError.trim(),
-                newIsCorrect ? undefined : newUsecase.trim(),
+                undefined // usecase
             );
+
+            setAttempts([...attempts, attempt]);
             setNewAnswer('');
             setNewIsCorrect(true);
-            setNewCorrection('');
             setNewError('');
-            setNewUsecase('');
-            setShowNewAttempt(false);
-            await loadData(id);
         } catch (err) {
-            console.error('Failed to create attempt:', err);
+            console.error('Failed to submit attempt:', err);
+            alert('提交失敗');
         } finally {
-            setCreatingAttempt(false);
-        }
-    };
-
-    const handleStartEditAttempt = (attempt: Attempt) => {
-        setEditingAttemptId(attempt.id);
-        setEditAttemptData({
-            answer_content: attempt.answer_content,
-            is_correct: attempt.is_correct,
-            correction: attempt.correction || '',
-            error_content: attempt.error_content || '',
-            usecase: attempt.usecase || '',
-        });
-    };
-
-    const handleSaveAttempt = async () => {
-        if (!editingAttemptId || !userClient) return;
-        try {
-            await updateAttempt(userClient, editingAttemptId, editAttemptData);
-            setEditingAttemptId(null);
-            if (id) await loadData(id);
-        } catch (err) {
-            console.error('Failed to update attempt:', err);
+            setSubmitting(false);
         }
     };
 
     const handleDeleteAttempt = async (attemptId: string) => {
-        if (!userClient) return;
-        if (!confirm('確定要刪除這次答題記錄嗎？')) return;
+        if (!userClient || !confirm('確定要刪除此記錄？')) return;
         try {
             await deleteAttempt(userClient, attemptId);
-            if (id) await loadData(id);
+            setAttempts(attempts.filter(a => a.id !== attemptId));
         } catch (err) {
             console.error('Failed to delete attempt:', err);
         }
     };
 
-    if (status === 'loading' || loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="flex flex-col items-center gap-4 animate-fade-in">
-                    <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-surface-400 text-sm">載入筆記中...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (status === 'error') {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="glass-card p-8 text-center max-w-md animate-fade-in">
-                    <XCircle size={40} className="mx-auto text-red-400 mb-3" />
-                    <h3 className="text-lg font-semibold text-white mb-2">連線失敗</h3>
-                    <button onClick={() => navigate('/setup')} className="btn-primary mt-2">
-                        <Settings size={16} /> 重新設定
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!note) {
-        return (
-            <div className="w-full px-6 lg:px-10 py-12 text-center">
-                <h2 className="text-xl font-semibold text-surface-300">找不到這份筆記</h2>
-                <button onClick={() => navigate('/')} className="btn-primary mt-4">
-                    <ArrowLeft size={16} /> 返回總表
-                </button>
-            </div>
-        );
-    }
+    if (loading) return <div className="p-8 text-center text-surface-400">載入中...</div>;
+    if (!note) return <div className="p-8 text-center text-surface-400">找不到筆記</div>;
 
     return (
-        <div className="w-full px-6 lg:px-10 py-8">
-            {/* Back button */}
-            <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-1.5 text-surface-400 hover:text-white text-sm font-medium mb-6 transition-colors"
-            >
-                <ArrowLeft size={16} />
-                返回總表
-            </button>
-
-            {/* Note Header */}
-            <div className="glass-card p-6 sm:p-8 mb-6 animate-fade-in">
-                {editingNote ? (
-                    <div className="flex flex-col gap-4">
-                        <input
-                            id="edit-note-title"
-                            type="text"
-                            value={editTitle}
-                            onChange={e => setEditTitle(e.target.value)}
-                            className="input-field text-xl font-bold"
-                            placeholder="筆記標題"
-                        />
-                        <textarea
-                            id="edit-note-question"
-                            value={editQuestion}
-                            onChange={e => setEditQuestion(e.target.value)}
-                            className="input-field"
-                            placeholder="題目內容"
-                            rows={4}
-                        />
-                        <textarea
-                            id="edit-note-standard-answer"
-                            value={editStandardAnswer}
-                            onChange={e => setEditStandardAnswer(e.target.value)}
-                            className="input-field font-mono text-sm"
-                            placeholder="標準答案 (SQL)"
-                            rows={3}
-                        />
-                        <div className="flex gap-3 justify-end">
-                            <button onClick={() => setEditingNote(false)} className="btn-secondary">取消</button>
-                            <button onClick={handleSaveNote} disabled={saving} className="btn-primary">
-                                <Save size={16} /> {saving ? '儲存中...' : '儲存'}
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div>
-                        <div className="flex items-start justify-between gap-3 mb-4">
-                            <h1 className="text-2xl sm:text-3xl font-bold text-white">{note.title}</h1>
-                            <button
-                                onClick={() => setEditingNote(true)}
-                                className="btn-secondary shrink-0"
-                                id="edit-note-btn"
-                            >
-                                <Edit3 size={14} /> 編輯
-                            </button>
-                        </div>
-                        <div className="p-4 rounded-xl bg-surface-900/50 border border-surface-700/30">
-                            <div className="flex items-center gap-2 mb-2">
-                                <BookOpen size={14} className="text-primary-400" />
-                                <span className="text-xs font-semibold text-primary-400 uppercase tracking-wider">題目</span>
-                            </div>
-                            <p className="text-surface-200 whitespace-pre-wrap leading-relaxed">{note.question}</p>
-                        </div>
-
-                        {note.standard_answer && (
-                            <div className="p-4 rounded-xl bg-surface-900/50 border border-surface-700/30 mt-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <CheckCircle2 size={14} className="text-emerald-400" />
-                                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">標準答案</span>
-                                </div>
-                                <code className="block text-emerald-300 whitespace-pre-wrap text-sm font-mono">{note.standard_answer}</code>
-                            </div>
-                        )}
-                        <div className="flex items-center gap-4 mt-4 text-sm text-surface-500">
-                            <span>建立：{new Date(note.created_at).toLocaleDateString('zh-TW')}</span>
-                            <span>更新：{new Date(note.updated_at).toLocaleDateString('zh-TW')}</span>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Attempts Section */}
-            <div className="flex items-center justify-between mb-5 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    📝 答題記錄
-                    <span className="text-sm font-normal text-surface-400">({attempts.length} 次)</span>
-                </h2>
-                <button
-                    onClick={() => setShowNewAttempt(!showNewAttempt)}
-                    className="btn-primary"
-                    id="new-attempt-btn"
-                >
-                    <Plus size={16} /> 新增答題
+        <div className="animate-fade-in pb-12">
+            {/* Header / Breadcrumb */}
+            <div className="flex items-center justify-between mb-6">
+                <button onClick={() => navigate('/')} className="flex items-center gap-2 text-surface-400 hover:text-white transition-colors">
+                    <ArrowLeft size={18} />
+                    <span className="font-medium">返回列表</span>
                 </button>
+                <div className="text-sm text-surface-500">
+                    建立於 {new Date(note.created_at).toLocaleDateString()}
+                </div>
             </div>
 
-            {/* New Attempt Form */}
-            {showNewAttempt && (
-                <div className="glass-card p-6 mb-6 animate-slide-up">
-                    <h3 className="text-lg font-semibold text-white mb-4">
-                        第 {attempts.length + 1} 次答題
-                    </h3>
-                    <form onSubmit={handleCreateAttempt} className="flex flex-col gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-surface-300 mb-1.5">答案</label>
-                            <textarea
-                                id="attempt-answer"
-                                value={newAnswer}
-                                onChange={e => setNewAnswer(e.target.value)}
-                                className="input-field"
-                                placeholder="輸入你的答案..."
-                                rows={5}
-                                required
-                            />
-                        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-                        <div>
-                            <label className="block text-sm font-medium text-surface-300 mb-2">結果</label>
-                            <div className="flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setNewIsCorrect(true)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-medium transition-all ${newIsCorrect
-                                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                                        : 'bg-surface-800/30 border-surface-700/30 text-surface-400 hover:border-surface-600'
-                                        }`}
-                                >
-                                    <CheckCircle2 size={18} /> 正確
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setNewIsCorrect(false)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-medium transition-all ${!newIsCorrect
-                                        ? 'bg-red-500/15 border-red-500/40 text-red-400'
-                                        : 'bg-surface-800/30 border-surface-700/30 text-surface-400 hover:border-surface-600'
-                                        }`}
-                                >
-                                    <XCircle size={18} /> 錯誤
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Error fields */}
-                        {!newIsCorrect && (
-                            <div className="flex flex-col gap-4 p-4 rounded-xl bg-red-500/5 border border-red-500/10 animate-fade-in">
+                {/* Left Panel: Question & Standard Answer (Sticky on Desktop) */}
+                <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-8">
+                    {editingNote ? (
+                        <div className="glass-card p-6 border-primary-500/30">
+                            <h3 className="text-lg font-bold text-white mb-4">編輯筆記</h3>
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-surface-300 mb-1.5">訂正</label>
-                                    <textarea
-                                        id="attempt-correction"
-                                        value={newCorrection}
-                                        onChange={e => setNewCorrection(e.target.value)}
+                                    <label className="label">標題</label>
+                                    <input
+                                        type="text"
+                                        value={editTitle}
+                                        onChange={e => setEditTitle(e.target.value)}
                                         className="input-field"
-                                        placeholder="正確的答案或訂正內容..."
-                                        rows={3}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-surface-300 mb-1.5">錯誤內容</label>
+                                    <label className="label">題目描述</label>
                                     <textarea
-                                        id="attempt-error"
+                                        value={editQuestion}
+                                        onChange={e => setEditQuestion(e.target.value)}
+                                        className="input-field font-mono text-sm leading-relaxed"
+                                        rows={8}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="label">標準答案 (SQL)</label>
+                                    <textarea
+                                        value={editStandardAnswer}
+                                        onChange={e => setEditStandardAnswer(e.target.value)}
+                                        className="input-field font-mono text-sm"
+                                        rows={5}
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setEditingNote(false)} className="btn-secondary flex-1">取消</button>
+                                    <button onClick={handleSaveNote} disabled={saving} className="btn-primary flex-1">
+                                        {saving ? '儲存中...' : '儲存變更'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="glass-card p-6 sm:p-8">
+                            <div className="flex justify-between items-start mb-4">
+                                <h1 className="text-2xl font-bold text-white leading-tight">{note.title}</h1>
+                                <button
+                                    onClick={() => setEditingNote(true)}
+                                    className="p-2 -mr-2 text-surface-400 hover:text-white rounded-lg hover:bg-surface-800 transition-colors"
+                                    title="編輯"
+                                >
+                                    <Save size={18} />
+                                </button>
+                            </div>
+
+                            <div className="prose prose-invert max-w-none text-surface-200 mb-8 whitespace-pre-wrap leading-relaxed">
+                                {note.question}
+                            </div>
+
+                            {note.standard_answer && (
+                                <div className="mt-8 pt-6 border-t border-surface-700/50">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <CheckCircle2 size={16} className="text-emerald-400" />
+                                        <h3 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider">標準答案</h3>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-surface-900/50 border border-emerald-500/20 group relative">
+                                        <code className="block text-emerald-300 whitespace-pre-wrap text-sm font-mono">
+                                            {note.standard_answer}
+                                        </code>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Panel: Attempts History & New Form */}
+                <div className="lg:col-span-7 space-y-6">
+
+                    {/* New Attempt Form */}
+                    <div className="glass-card p-6 border-t-4 border-t-primary-500">
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <Play size={20} className="text-primary-400" />
+                            新增練習記錄
+                        </h3>
+                        <form onSubmit={handleSubmitAttempt} className="space-y-4">
+                            <div>
+                                <textarea
+                                    placeholder="輸入你的 SQL 寫法..."
+                                    value={newAnswer}
+                                    onChange={e => setNewAnswer(e.target.value)}
+                                    className="input-field font-mono text-sm min-h-[120px]"
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewIsCorrect(true)}
+                                        className={`flex-1 btn-base rounded-xl border ${newIsCorrect
+                                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                                            : 'bg-surface-800 border-surface-700 text-surface-400 hover:border-surface-600'}`}
+                                    >
+                                        <CheckCircle2 size={18} /> 答對
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewIsCorrect(false)}
+                                        className={`flex-1 btn-base rounded-xl border ${!newIsCorrect
+                                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                                            : 'bg-surface-800 border-surface-700 text-surface-400 hover:border-surface-600'}`}
+                                    >
+                                        <XCircle size={18} /> 答錯
+                                    </button>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={submitting || !newAnswer.trim()}
+                                    className="btn-primary px-8"
+                                >
+                                    {submitting ? '提交中...' : <><Send size={18} /> 提交</>}
+                                </button>
+                            </div>
+
+                            {!newIsCorrect && (
+                                <div className="animate-fade-in pt-2">
+                                    <label className="text-sm text-red-300 block mb-1.5">錯誤訊息 (Error Message)</label>
+                                    <textarea
+                                        placeholder="貼上錯誤訊息..."
                                         value={newError}
                                         onChange={e => setNewError(e.target.value)}
-                                        className="input-field"
-                                        placeholder="描述錯誤的原因..."
-                                        rows={2}
+                                        className="input-field border-red-500/30 focus:border-red-500/60 min-h-[80px]"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-surface-300 mb-1.5">Use Case</label>
-                                    <textarea
-                                        id="attempt-usecase"
-                                        value={newUsecase}
-                                        onChange={e => setNewUsecase(e.target.value)}
-                                        className="input-field"
-                                        placeholder="相關使用情境..."
-                                        rows={2}
-                                    />
-                                </div>
-                            </div>
-                        )}
+                            )}
+                        </form>
+                    </div>
 
-                        <div className="flex gap-3 justify-end">
-                            <button type="button" onClick={() => setShowNewAttempt(false)} className="btn-secondary">取消</button>
-                            <button type="submit" disabled={creatingAttempt} className="btn-primary" id="create-attempt-btn">
-                                {creatingAttempt ? '儲存中...' : '儲存答題'}
-                            </button>
+                    {/* History List */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-1">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Clock size={20} className="text-surface-400" />
+                                練習歷史
+                            </h3>
+                            <span className="text-sm text-surface-400">共 {attempts.length} 次</span>
                         </div>
-                    </form>
-                </div>
-            )}
 
-            {/* Attempts List */}
-            {attempts.length === 0 ? (
-                <div className="glass-card p-10 text-center animate-fade-in">
-                    <BookOpen size={40} className="mx-auto text-surface-600 mb-3" />
-                    <h3 className="text-lg font-semibold text-surface-300 mb-1">尚未作答</h3>
-                    <p className="text-surface-500 text-sm">點擊「新增答題」記錄你的第一次作答</p>
-                </div>
-            ) : (
-                <div className="flex flex-col gap-4">
-                    {attempts.map((attempt, index) => {
-                        const isExpanded = expandedAttempt === attempt.id;
-                        const isEditing = editingAttemptId === attempt.id;
-
-                        return (
-                            <div
-                                key={attempt.id}
-                                className="glass-card overflow-hidden animate-slide-up"
-                                style={{ animationDelay: `${index * 0.05}s` }}
-                            >
-                                {/* Attempt header */}
-                                <div
-                                    className="flex items-center justify-between p-4 sm:p-5 cursor-pointer hover:bg-surface-800/20 transition-colors"
-                                    onClick={() => setExpandedAttempt(isExpanded ? null : attempt.id)}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <span className="badge badge-attempt">第 {attempt.attempt_number} 次</span>
-                                        <span className={`badge ${attempt.is_correct ? 'badge-correct' : 'badge-incorrect'}`}>
-                                            {attempt.is_correct ? <><CheckCircle2 size={12} /> 正確</> : <><XCircle size={12} /> 錯誤</>}
-                                        </span>
-                                        <span className="text-xs text-surface-500">
-                                            {new Date(attempt.created_at).toLocaleDateString('zh-TW')}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={e => { e.stopPropagation(); handleStartEditAttempt(attempt); }}
-                                            className="p-1.5 rounded-lg text-surface-500 hover:text-primary-400 hover:bg-primary-500/10 transition-all"
-                                            title="編輯"
-                                        >
-                                            <Edit3 size={14} />
-                                        </button>
-                                        <button
-                                            onClick={e => { e.stopPropagation(); handleDeleteAttempt(attempt.id); }}
-                                            className="p-1.5 rounded-lg text-surface-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                                            title="刪除"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                        {isExpanded ? <ChevronUp size={16} className="text-surface-500" /> : <ChevronDown size={16} className="text-surface-500" />}
-                                    </div>
-                                </div>
-
-                                {/* Expanded content */}
-                                {isExpanded && (
-                                    <div className="px-4 sm:px-5 pb-5 border-t border-surface-700/30 animate-fade-in">
-                                        {isEditing ? (
-                                            /* Edit mode */
-                                            <div className="flex flex-col gap-4 pt-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-surface-300 mb-1.5">答案</label>
-                                                    <textarea
-                                                        value={editAttemptData.answer_content || ''}
-                                                        onChange={e => setEditAttemptData({ ...editAttemptData, answer_content: e.target.value })}
-                                                        className="input-field"
-                                                        rows={4}
-                                                    />
-                                                </div>
-                                                <div className="flex gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditAttemptData({ ...editAttemptData, is_correct: true })}
-                                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm font-medium transition-all ${editAttemptData.is_correct
-                                                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                                                            : 'bg-surface-800/30 border-surface-700/30 text-surface-400'
-                                                            }`}
-                                                    >
-                                                        <CheckCircle2 size={16} /> 正確
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEditAttemptData({ ...editAttemptData, is_correct: false })}
-                                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm font-medium transition-all ${!editAttemptData.is_correct
-                                                            ? 'bg-red-500/15 border-red-500/40 text-red-400'
-                                                            : 'bg-surface-800/30 border-surface-700/30 text-surface-400'
-                                                            }`}
-                                                    >
-                                                        <XCircle size={16} /> 錯誤
-                                                    </button>
-                                                </div>
-                                                {!editAttemptData.is_correct && (
-                                                    <div className="flex flex-col gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/10">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-surface-300 mb-1">訂正</label>
-                                                            <textarea
-                                                                value={editAttemptData.correction || ''}
-                                                                onChange={e => setEditAttemptData({ ...editAttemptData, correction: e.target.value })}
-                                                                className="input-field"
-                                                                rows={2}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-surface-300 mb-1">錯誤內容</label>
-                                                            <textarea
-                                                                value={editAttemptData.error_content || ''}
-                                                                onChange={e => setEditAttemptData({ ...editAttemptData, error_content: e.target.value })}
-                                                                className="input-field"
-                                                                rows={2}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-surface-300 mb-1">Use Case</label>
-                                                            <textarea
-                                                                value={editAttemptData.usecase || ''}
-                                                                onChange={e => setEditAttemptData({ ...editAttemptData, usecase: e.target.value })}
-                                                                className="input-field"
-                                                                rows={2}
-                                                            />
-                                                        </div>
-                                                    </div>
+                        {attempts.length === 0 ? (
+                            <div className="text-center py-12 text-surface-500 border-2 border-dashed border-surface-800 rounded-2xl">
+                                尚未有練習記錄，開始你的第一次練習吧！
+                            </div>
+                        ) : (
+                            <div className="flex flex-col-reverse gap-4">
+                                {/* flex-col-reverse to show latest at top visually if mapped normally? 
+                                Wait, database returns order? If I map normal, first is oldest.
+                                User usually wants latest top.
+                                I'll iterate normally but use flex-col-reverse? Or sort?
+                                Let's sort manually to be safe.
+                            */}
+                                {[...attempts].sort((a, b) => b.attempt_number - a.attempt_number).map((attempt) => (
+                                    <div key={attempt.id} className="glass-card p-5 animate-slide-up">
+                                        <div className="flex items-start justify-between gap-4 mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-8 h-8 rounded-full bg-surface-800 flex items-center justify-center text-sm font-bold text-surface-300">
+                                                    #{attempt.attempt_number}
+                                                </span>
+                                                <span className="text-xs text-surface-500">
+                                                    {new Date(attempt.created_at).toLocaleString('zh-TW')}
+                                                </span>
+                                                {attempt.is_correct ? (
+                                                    <span className="badge badge-correct flex items-center gap-1">
+                                                        <CheckCircle2 size={12} /> 正確
+                                                    </span>
+                                                ) : (
+                                                    <span className="badge badge-incorrect flex items-center gap-1">
+                                                        <XCircle size={12} /> 錯誤
+                                                    </span>
                                                 )}
-                                                <div className="flex gap-3 justify-end">
-                                                    <button onClick={() => setEditingAttemptId(null)} className="btn-secondary">取消</button>
-                                                    <button onClick={handleSaveAttempt} className="btn-primary">
-                                                        <Save size={14} /> 儲存
-                                                    </button>
-                                                </div>
                                             </div>
-                                        ) : (
-                                            /* View mode */
-                                            <div className="pt-4 flex flex-col gap-4">
-                                                <div>
-                                                    <h4 className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1.5">答案</h4>
-                                                    <p className="text-surface-200 whitespace-pre-wrap leading-relaxed text-sm">{attempt.answer_content}</p>
-                                                </div>
-                                                {!attempt.is_correct && (
-                                                    <>
-                                                        {attempt.correction && (
-                                                            <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                                                                <h4 className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">訂正</h4>
-                                                                <p className="text-surface-200 whitespace-pre-wrap text-sm">{attempt.correction}</p>
-                                                            </div>
-                                                        )}
-                                                        {attempt.error_content && (
-                                                            <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10">
-                                                                <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-1">錯誤內容</h4>
-                                                                <p className="text-surface-300 whitespace-pre-wrap text-sm">{attempt.error_content}</p>
-                                                            </div>
-                                                        )}
-                                                        {attempt.usecase && (
-                                                            <div className="p-3 rounded-xl bg-primary-500/5 border border-primary-500/10">
-                                                                <h4 className="text-xs font-semibold text-primary-400 uppercase tracking-wider mb-1">Use Case</h4>
-                                                                <p className="text-surface-300 whitespace-pre-wrap text-sm">{attempt.usecase}</p>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
+                                            <button
+                                                onClick={() => handleDeleteAttempt(attempt.id)}
+                                                className="text-surface-600 hover:text-red-400 transition-colors p-1"
+                                                title="刪除"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+
+                                        <div className="bg-surface-950/50 rounded-lg p-3 font-mono text-sm text-surface-200 border border-surface-800/50 overflow-x-auto">
+                                            {attempt.answer_content}
+                                        </div>
+
+                                        {!attempt.is_correct && attempt.error_content && (
+                                            <div className="mt-3 text-sm flex gap-2 text-red-300/90 bg-red-500/5 p-3 rounded-lg border border-red-500/10">
+                                                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                                                <div className="whitespace-pre-wrap font-mono text-xs">{attempt.error_content}</div>
                                             </div>
                                         )}
                                     </div>
-                                )}
+                                ))}
                             </div>
-                        );
-                    })}
+                        )}
+                        <div ref={attemptsEndRef} />
+                    </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }
