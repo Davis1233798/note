@@ -1,22 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUserDatabase } from '../lib/UserDatabaseContext';
 import { fetchNoteContent, createAttempt, updateNote, deleteAttempt, type Note, type Attempt } from '../lib/supabase';
 import {
-    ArrowLeft,
     Play,
-    Save,
-    RotateCcw,
-    CheckCircle2,
-    XCircle,
     FileText,
     Code2,
     History,
-    AlertTriangle,
     ChevronDown,
     ChevronUp,
     MoreVertical,
-    TerminalSquare
+    TerminalSquare,
+    Trash2,
+    ArrowLeft
 } from 'lucide-react';
 
 type Tab = 'description' | 'solution' | 'submissions';
@@ -80,36 +76,11 @@ export default function NotePage() {
         setConsoleOpen(true);
         setSubmissionResult(null);
 
-        // Simulate "Running" (In real app, we might run Explain or dry run)
-        // Here we act as "Submit" immediately or just mark simulated result?
-        // User wants LeetCode style.
-        // Let's treat "Run Code" as "Submit Attempt" for now, or distinguish?
-        // LeetCode has "Run" (test case) and "Submit" (judge).
-        // We only have "Submit Attempt".
-        // Let's use "Submit" flow.
-
-        try {
-            // For now, assume User manually marks Correct/Incorrect in a dialog? 
-            // OR we use the Code and ask "Is this correct?"
-            // To mimic LeetCode, usually system judges.
-            // Since we don't have a real SQL engine backend to judge, we can ask user *after* run.
-            // But for UI flow, let's just create the attempt.
-
-            // Wait, previous UI asked user "Correct/Incorrect".
-            // LeetCode style implies auto-judge.
-            // Since we can't auto-judge, we might need a "Self-Check" modal or inline UI.
-            // I'll implement a "Self Check" overlay in the Console area.
-
-            // Temporary: just show "Running..." then ask result.
-            setTimeout(() => {
-                setSubmissionResult({ success: true, message: 'Execution finished. verify result...' }); // Placeholder state
-            }, 500);
-
-        } catch (err) {
-            console.error(err);
-        } finally {
+        // Simulate "Running"
+        setTimeout(() => {
+            setSubmissionResult({ success: true, message: 'Execution finished. verify result...' });
             setSubmitting(false);
-        }
+        }, 500);
     };
 
     const handleConfirmResult = async (isCorrect: boolean, errorMsg?: string) => {
@@ -133,7 +104,6 @@ export default function NotePage() {
                 message: isCorrect ? 'Accepted' : 'Wrong Answer',
                 error: errorMsg
             });
-            // If correct, maybe switch tab to Submissions?
             if (isCorrect) {
                 // setActiveTab('submissions'); 
             }
@@ -149,7 +119,7 @@ export default function NotePage() {
         if (!id || !userClient || !note) return;
         try {
             const updated = await updateNote(userClient, id, {
-                title: note.title, // keep title?
+                title: note.title,
                 question: editQuestion,
                 standard_answer: editStandardAnswer
             });
@@ -160,33 +130,57 @@ export default function NotePage() {
         }
     };
 
+    const handleDeleteAttempt = async (attemptId: string) => {
+        if (!userClient || !confirm('確定要刪除此記錄？')) return;
+        try {
+            await deleteAttempt(userClient, attemptId);
+            setAttempts(attempts.filter(a => a.id !== attemptId));
+        } catch (err) {
+            console.error('Failed to delete attempt:', err);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center text-surface-400">載入中...</div>;
     if (!note) return <div className="p-8 text-center text-surface-400">找不到筆記</div>;
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] lg:h-screen w-full bg-neutral-950 overflow-hidden text-sm">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] lg:h-screen w-full bg-neutral-950 overflow-hidden text-sm animate-fade-in relative z-10">
+            {/* Mobile Back Button (Top Left Overlay) - Only visible if we need it? 
+                Actually Layout has Sidebar.
+                But if full screen, Sidebar might be hidden?
+                DashboardLayout logic: Sidebar is sticky.
+                If NotePage is full screen, does it cover Sidebar?
+                No, NotePage is inside 'main' which is next to Sidebar.
+                So Sidebar is always visible (collapsed).
+                I'll add a 'Back' button in Left Panel header if needed, but Sidebar has 'Dashboard' link.
+                So explicit back button is not strictly necessary, but good for UX.
+             */}
 
             {/* Left Panel */}
             <div className="w-full lg:w-1/2 flex flex-col border-b lg:border-b-0 lg:border-r border-surface-800 bg-neutral-900">
                 {/* Tabs Header */}
-                <div className="flex items-center h-10 bg-surface-900 border-b border-surface-800 px-2 select-none">
+                <div className="flex items-center h-10 bg-surface-900 border-b border-surface-800 px-2 select-none relative">
+                    <button onClick={() => navigate('/')} className="mr-2 p-1 text-surface-500 hover:text-white" title="返回列表">
+                        <ArrowLeft size={16} />
+                    </button>
+                    <div className="h-4 w-px bg-surface-700 mx-1"></div>
                     <button
                         onClick={() => setActiveTab('description')}
                         className={`flex items-center gap-2 px-4 h-full text-xs font-medium transition-colors border-b-2 ${activeTab === 'description' ? 'text-white border-white' : 'text-surface-400 border-transparent hover:text-surface-200'}`}
                     >
-                        <FileText size={14} /> 題目描述
+                        <FileText size={14} /> Description
                     </button>
                     <button
                         onClick={() => setActiveTab('solution')}
                         className={`flex items-center gap-2 px-4 h-full text-xs font-medium transition-colors border-b-2 ${activeTab === 'solution' ? 'text-white border-white' : 'text-surface-400 border-transparent hover:text-surface-200'}`}
                     >
-                        <Code2 size={14} /> 標準答案
+                        <Code2 size={14} /> Solution
                     </button>
                     <button
                         onClick={() => setActiveTab('submissions')}
                         className={`flex items-center gap-2 px-4 h-full text-xs font-medium transition-colors border-b-2 ${activeTab === 'submissions' ? 'text-white border-white' : 'text-surface-400 border-transparent hover:text-surface-200'}`}
                     >
-                        <History size={14} /> 提交記錄
+                        <History size={14} /> Submissions
                     </button>
                 </div>
 
@@ -209,7 +203,7 @@ export default function NotePage() {
                                         className="input-field font-mono text-sm"
                                         rows={10}
                                     />
-                                    <button onClick={handleSaveNoteContent} className="btn-primary w-full">儲存</button>
+                                    <button onClick={handleSaveNoteContent} className="btn-primary w-full">Save</button>
                                 </div>
                             ) : (
                                 <div className="prose prose-invert max-w-none text-surface-200 whitespace-pre-wrap leading-relaxed">
@@ -222,7 +216,7 @@ export default function NotePage() {
                     {activeTab === 'solution' && (
                         <div className="animate-fade-in space-y-4">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-bold text-white">標準解答 (SQL)</h3>
+                                <h3 className="text-sm font-bold text-white">Standard Solution (SQL)</h3>
                                 {startEditing && (
                                     <button onClick={handleSaveNoteContent} className="text-xs btn-primary py-1 px-2">Save</button>
                                 )}
@@ -236,7 +230,7 @@ export default function NotePage() {
                                 />
                             ) : (
                                 <div className="p-4 rounded-lg bg-surface-950 border border-surface-800 font-mono text-sm text-emerald-400">
-                                    {note.standard_answer || '尚未設定標準答案'}
+                                    {note.standard_answer || 'No standard answer provided.'}
                                 </div>
                             )}
                         </div>
@@ -245,10 +239,10 @@ export default function NotePage() {
                     {activeTab === 'submissions' && (
                         <div className="animate-fade-in space-y-3">
                             {attempts.length === 0 ? (
-                                <div className="text-center py-8 text-surface-500">尚無提交記錄</div>
+                                <div className="text-center py-8 text-surface-500">No submissions yet</div>
                             ) : (
                                 [...attempts].sort((a, b) => b.attempt_number - a.attempt_number).map(attempt => (
-                                    <div key={attempt.id} className="p-3 bg-surface-800/30 rounded-lg hover:bg-surface-800/50 transition-colors border border-surface-800">
+                                    <div key={attempt.id} className="p-3 bg-surface-800/30 rounded-lg hover:bg-surface-800/50 transition-colors border border-surface-800 group relative">
                                         <div className="flex justify-between items-center mb-2">
                                             <span className={`text-xs font-bold px-2 py-0.5 rounded ${attempt.is_correct ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                                                 {attempt.is_correct ? 'Accepted' : 'Wrong Answer'}
@@ -258,6 +252,12 @@ export default function NotePage() {
                                         <div className="font-mono text-xs text-surface-300 overflow-x-auto whitespace-pre-wrap">
                                             {attempt.answer_content}
                                         </div>
+                                        <button
+                                            onClick={() => handleDeleteAttempt(attempt.id)}
+                                            className="absolute top-3 right-3 text-surface-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     </div>
                                 ))
                             )}
@@ -277,7 +277,6 @@ export default function NotePage() {
 
                 {/* Code Editor Area */}
                 <div className="flex-1 relative bg-[#1e1e1e]">
-                    {/* Using simple textarea for now, ideally Monaco */}
                     <textarea
                         value={code}
                         onChange={e => setCode(e.target.value)}
@@ -294,23 +293,23 @@ export default function NotePage() {
                             onClick={() => setConsoleOpen(!consoleOpen)}
                             className="flex items-center gap-2 text-surface-400 hover:text-white text-xs font-medium transition-colors"
                         >
-                            <TerminalSquare size={14} /> 執行結果 (Console)
+                            <TerminalSquare size={14} /> Console
                             {consoleOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                         </button>
                         <div className="flex gap-2">
                             <button
                                 onClick={handleRunCode}
                                 disabled={submitting || !code.trim()}
-                                className="btn-base bg-surface-700 hover:bg-surface-600 text-white px-4 py-1.5 rounded text-xs font-medium flex items-center gap-2"
+                                className="btn-base bg-surface-700 hover:bg-surface-600 text-white px-4 py-1.5 rounded text-xs font-medium flex items-center gap-2 transition-colors"
                             >
-                                <Play size={12} fill="currentColor" /> 執行程式碼
+                                <Play size={12} fill="currentColor" /> Run Code
                             </button>
                             <button
-                                onClick={handleRunCode} // Reuse logic for now
+                                onClick={handleRunCode}
                                 disabled={submitting || !code.trim()}
                                 className="btn-primary px-4 py-1.5 rounded text-xs font-medium"
                             >
-                                提交解答
+                                Submit
                             </button>
                         </div>
                     </div>
@@ -319,33 +318,32 @@ export default function NotePage() {
                     {consoleOpen && (
                         <div className="flex-1 overflow-y-auto p-4 bg-surface-950">
                             {submissionResult === null && !submitting && (
-                                <div className="text-surface-500 text-sm">請輸入 SQL 並點擊執行...</div>
+                                <div className="text-surface-500 text-sm">Enter SQL and click Run or Submit...</div>
                             )}
                             {submitting && (
                                 <div className="text-surface-400 text-sm animate-pulse">Running...</div>
                             )}
                             {submissionResult && submissionResult.message === 'Execution finished. verify result...' && (
                                 <div className="space-y-4 animate-fade-in">
-                                    <p className="text-surface-300 text-sm">系統無法自動驗證 SQL。請確認您的輸出結果是否正確：</p>
+                                    <p className="text-surface-300 text-sm">System cannot verify SQL execution automatically. Please verify your result:</p>
                                     <div className="flex gap-3">
                                         <button
                                             onClick={() => handleConfirmResult(true)}
-                                            className="px-4 py-2 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-sm font-medium border border-emerald-500/30"
+                                            className="px-4 py-2 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-sm font-medium border border-emerald-500/30 transition-colors"
                                         >
-                                            正確 (Accepted)
+                                            Accepted
                                         </button>
                                         <button
                                             onClick={() => handleConfirmResult(false, 'Self reported wrong answer')}
-                                            className="px-4 py-2 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-medium border border-red-500/30"
+                                            className="px-4 py-2 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-medium border border-red-500/30 transition-colors"
                                         >
-                                            錯誤 (Wrong Answer)
+                                            Wrong Answer
                                         </button>
                                     </div>
                                     <div className="mt-4">
-                                        {/* Optional error input */}
                                         <input
                                             type="text"
-                                            placeholder="若錯誤，可在此備註原因..."
+                                            placeholder="Optional: Error details..."
                                             className="input-field text-sm"
                                             onKeyDown={e => {
                                                 if (e.key === 'Enter') handleConfirmResult(false, (e.target as HTMLInputElement).value)

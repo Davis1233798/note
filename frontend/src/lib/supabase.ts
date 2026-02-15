@@ -292,6 +292,24 @@ export async function fetchNotesWithAttempts(client: SupabaseClient) {
     return data as (Note & { attempts: Attempt[] })[];
 }
 
+export async function fetchNoteContent(client: SupabaseClient, id: string) {
+    const { data: note, error: noteError } = await client
+        .from('notes')
+        .select('*')
+        .eq('id', id)
+        .single();
+    if (noteError) throw noteError;
+
+    const { data: attempts, error: attemptsError } = await client
+        .from('attempts')
+        .select('*')
+        .eq('note_id', id)
+        .order('attempt_number', { ascending: true });
+    if (attemptsError) throw attemptsError;
+
+    return { note: note as Note, attempts: attempts as Attempt[] };
+}
+
 // ===== SQL for user's Supabase (使用者需手動執行) =====
 
 export const USER_DATABASE_SQL = `
