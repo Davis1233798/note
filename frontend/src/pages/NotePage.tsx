@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useUserDatabase } from '../lib/UserDatabaseContext';
 import {
     fetchNote, updateNote, fetchAttempts, createAttempt, updateAttempt, deleteAttempt,
     type Note, type Attempt,
 } from '../lib/supabase';
 import {
     ArrowLeft, Save, Plus, CheckCircle2, XCircle, Trash2, Edit3,
-    ChevronDown, ChevronUp, BookOpen,
+    ChevronDown, ChevronUp, BookOpen, Settings,
 } from 'lucide-react';
 
 export default function NotePage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { status, userClient } = useUserDatabase();
 
     const [note, setNote] = useState<Note | null>(null);
     const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -40,14 +42,21 @@ export default function NotePage() {
     const [editAttemptData, setEditAttemptData] = useState<Partial<Attempt>>({});
 
     useEffect(() => {
-        if (id) loadData(id);
-    }, [id]);
+        if (status === 'needs_setup') {
+            navigate('/setup');
+        }
+    }, [status, navigate]);
+
+    useEffect(() => {
+        if (id && status === 'connected' && userClient) loadData(id);
+    }, [id, status, userClient]);
 
     const loadData = async (noteId: string) => {
+        if (!userClient) return;
         try {
             const [noteData, attemptsData] = await Promise.all([
-                fetchNote(noteId),
-                fetchAttempts(noteId),
+                fetchNote(userClient, noteId),
+                fetchAttempts(userClient, noteId),
             ]);
             setNote(noteData);
             setAttempts(attemptsData);
@@ -61,10 +70,10 @@ export default function NotePage() {
     };
 
     const handleSaveNote = async () => {
-        if (!id || !editTitle.trim() || !editQuestion.trim()) return;
+        if (!id || !editTitle.trim() || !editQuestion.trim() || !userClient) return;
         setSaving(true);
         try {
-            const updated = await updateNote(id, { title: editTitle.trim(), question: editQuestion.trim() });
+            const updated = await updateNote(userClient, id, { title: editTitle.trim(), question: editQuestion.trim() });
             setNote(updated);
             setEditingNote(false);
         } catch (err) {
@@ -76,11 +85,12 @@ export default function NotePage() {
 
     const handleCreateAttempt = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!id || !newAnswer.trim()) return;
+        if (!id || !newAnswer.trim() || !userClient) return;
         setCreatingAttempt(true);
         try {
             const attemptNumber = attempts.length + 1;
             await createAttempt(
+                userClient,
                 id,
                 attemptNumber,
                 newAnswer.trim(),
@@ -115,9 +125,9 @@ export default function NotePage() {
     };
 
     const handleSaveAttempt = async () => {
-        if (!editingAttemptId) return;
+        if (!editingAttemptId || !userClient) return;
         try {
-            await updateAttempt(editingAttemptId, editAttemptData);
+            await updateAttempt(userClient, editingAttemptId, editAttemptData);
             setEditingAttemptId(null);
             if (id) await loadData(id);
         } catch (err) {
@@ -126,16 +136,17 @@ export default function NotePage() {
     };
 
     const handleDeleteAttempt = async (attemptId: string) => {
+        if (!userClient) return;
         if (!confirm('確定要刪除這次答題記錄嗎？')) return;
         try {
-            await deleteAttempt(attemptId);
+            await deleteAttempt(userClient, attemptId);
             if (id) await loadData(id);
         } catch (err) {
             console.error('Failed to delete attempt:', err);
         }
     };
 
-    if (loading) {
+    if (status === 'loading' || loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="flex flex-col items-center gap-4 animate-fade-in">
@@ -146,9 +157,23 @@ export default function NotePage() {
         );
     }
 
+    if (status === 'error') {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="glass-card p-8 text-center max-w-md animate-fade-in">
+                    <XCircle size={40} className="mx-auto text-red-400 mb-3" />
+                    <h3 className="text-lg font-semibold text-white mb-2">連線失敗</h3>
+                    <button onClick={() => navigate('/setup')} className="btn-primary mt-2">
+                        <Settings size={16} /> 重新設定
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!note) {
         return (
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 text-center">
+            <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 py-12 text-center">
                 <h2 className="text-xl font-semibold text-surface-300">找不到這份筆記</h2>
                 <button onClick={() => navigate('/')} className="btn-primary mt-4">
                     <ArrowLeft size={16} /> 返回總表
@@ -283,7 +308,7 @@ export default function NotePage() {
                             </div>
                         </div>
 
-                        {/* Error fields - only show when incorrect */}
+                        {/* Error fields */}
                         {!newIsCorrect && (
                             <div className="flex flex-col gap-4 p-4 rounded-xl bg-red-500/5 border border-red-500/10 animate-fade-in">
                                 <div>

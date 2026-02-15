@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useUserDatabase } from '../lib/UserDatabaseContext';
 import { fetchNotesWithAttempts, createNote, deleteNote, type Note, type Attempt } from '../lib/supabase';
-import { Plus, FileText, ExternalLink, Trash2, Search, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, FileText, ExternalLink, Trash2, Search, AlertTriangle, CheckCircle2, XCircle, Loader2, Settings } from 'lucide-react';
 
 export default function SummaryPage() {
+    const navigate = useNavigate();
+    const { status, userClient, userId } = useUserDatabase();
     const [notes, setNotes] = useState<(Note & { attempts: Attempt[] })[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -13,12 +16,21 @@ export default function SummaryPage() {
     const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        loadNotes();
-    }, []);
+        if (status === 'needs_setup') {
+            navigate('/setup');
+        }
+    }, [status, navigate]);
+
+    useEffect(() => {
+        if (status === 'connected' && userClient) {
+            loadNotes();
+        }
+    }, [status, userClient]);
 
     const loadNotes = async () => {
+        if (!userClient) return;
         try {
-            const data = await fetchNotesWithAttempts();
+            const data = await fetchNotesWithAttempts(userClient);
             setNotes(data);
         } catch (err) {
             console.error('Failed to load notes:', err);
@@ -29,10 +41,10 @@ export default function SummaryPage() {
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newTitle.trim() || !newQuestion.trim()) return;
+        if (!newTitle.trim() || !newQuestion.trim() || !userClient || !userId) return;
         setCreating(true);
         try {
-            await createNote(newTitle.trim(), newQuestion.trim());
+            await createNote(userClient, newTitle.trim(), newQuestion.trim(), userId);
             setNewTitle('');
             setNewQuestion('');
             setShowNewNote(false);
@@ -45,14 +57,42 @@ export default function SummaryPage() {
     };
 
     const handleDelete = async (id: string) => {
+        if (!userClient) return;
         if (!confirm('確定要刪除這個筆記嗎？所有答題記錄也會一併刪除。')) return;
         try {
-            await deleteNote(id);
+            await deleteNote(userClient, id);
             setNotes(notes.filter(n => n.id !== id));
         } catch (err) {
             console.error('Failed to delete note:', err);
         }
     };
+
+    // 等待資料庫連線
+    if (status === 'loading') {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4 animate-fade-in">
+                    <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-surface-400 text-sm">連線資料庫中...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (status === 'error') {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="glass-card p-8 text-center max-w-md animate-fade-in">
+                    <XCircle size={40} className="mx-auto text-red-400 mb-3" />
+                    <h3 className="text-lg font-semibold text-white mb-2">連線失敗</h3>
+                    <p className="text-surface-400 text-sm mb-4">無法連接到你的 Supabase 資料庫。</p>
+                    <button onClick={() => navigate('/setup')} className="btn-primary">
+                        <Settings size={16} /> 重新設定
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const filteredNotes = notes.filter(
         n => n.title.toLowerCase().includes(search.toLowerCase()) ||

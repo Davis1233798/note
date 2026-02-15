@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { BookOpen, LogOut, LayoutDashboard } from 'lucide-react';
+import { BookOpen, LogOut, LayoutDashboard, Settings } from 'lucide-react';
 
 export default function Navbar() {
     const { user, signOut } = useAuth();
@@ -39,6 +39,16 @@ export default function Navbar() {
                         >
                             <LayoutDashboard size={16} />
                             <span className="hidden sm:inline">總表</span>
+                        </Link>
+                        <Link
+                            to="/setup"
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive('/setup')
+                                ? 'bg-primary-500/15 text-primary-300'
+                                : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800/50'
+                                }`}
+                        >
+                            <Settings size={16} />
+                            <span className="hidden sm:inline">設定</span>
                         </Link>
                     </div>
 
