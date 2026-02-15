@@ -108,20 +108,20 @@ jobs:
             if [ ! -f /etc/systemd/system/note-app.service ]; then
               echo "🔧 First-time setup..."
               sudo mkdir -p $APP_DIR/static
-              sudo cp $DEPLOY_SRC/deploy/note-app.service /etc/systemd/system/
-              sudo cp $DEPLOY_SRC/deploy/nginx.conf /etc/nginx/sites-available/note-app
-              sudo ln -sf /etc/nginx/sites-available/note-app /etc/nginx/sites-enabled/note-app
-              sudo rm -f /etc/nginx/sites-enabled/default
               sudo systemctl daemon-reload
               sudo systemctl enable note-app
-              sudo nginx -t && sudo systemctl reload nginx
-            else
-              # 更新 service / nginx 設定（如有變更）
-              sudo cp $DEPLOY_SRC/deploy/note-app.service /etc/systemd/system/
-              sudo cp $DEPLOY_SRC/deploy/nginx.conf /etc/nginx/sites-available/note-app
-              sudo systemctl daemon-reload
-              sudo nginx -t && sudo systemctl reload nginx
             fi
+
+            # 每次都更新 service 和 nginx 設定
+            sudo cp $DEPLOY_SRC/deploy/note-app.service /etc/systemd/system/
+            sudo cp $DEPLOY_SRC/deploy/nginx.conf /etc/nginx/sites-available/note-app
+            sudo ln -sf /etc/nginx/sites-available/note-app /etc/nginx/sites-enabled/note-app
+
+            # 確保 default 不會搶流量
+            sudo rm -f /etc/nginx/sites-enabled/default
+
+            sudo systemctl daemon-reload
+            sudo nginx -t && sudo systemctl reload nginx
 
             # 徹底停止舊服務
             echo "🛑 Stopping old service..."
