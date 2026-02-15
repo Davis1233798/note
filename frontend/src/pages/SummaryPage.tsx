@@ -98,7 +98,7 @@ export default function SummaryPage() {
     }
 
     return (
-        <div className="space-y-8 animate-fade-in">
+        <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
             {/* Header */}
             <div>
                 <h1 className="text-2xl font-bold text-white mb-2">總覽 Dashboard</h1>
