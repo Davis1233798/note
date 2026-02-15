@@ -113,13 +113,30 @@ jobs:
             fi
 
             # 每次都更新 service 和 nginx 設定
+            
+            # 生成自簽署憑證（給 Cloudflare Full SSL 模式使用）
+            echo "🔐 Generating self-signed SSL certs..."
+            sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+              -keyout /etc/ssl/private/sqlnote.key \
+              -out /etc/ssl/certs/sqlnote.crt \
+              -subj "/C=TW/ST=Taiwan/L=Taipei/O=Self/CN=sqlnote.dpdns.org" \
+              -addext "subjectAltName=DNS:sqlnote.dpdns.org" < /dev/null 2>/dev/null || true
+            sudo chmod 644 /etc/ssl/certs/sqlnote.crt
+            sudo chmod 600 /etc/ssl/private/sqlnote.key
+
             # 直接生成 nginx.conf 確保無 CRLF 問題且內容正確
             echo "🔧 Generating nginx.conf..."
             cat > $DEPLOY_SRC/deploy/nginx.conf <<EOF
             server {
                 listen 80;
                 listen [::]:80;
+                listen 443 ssl;
+                listen [::]:443 ssl;
                 server_name sqlnote.dpdns.org;
+
+                ssl_certificate /etc/ssl/certs/sqlnote.crt;
+                ssl_certificate_key /etc/ssl/private/sqlnote.key;
+                ssl_protocols TLSv1.2 TLSv1.3;
 
                 add_header X-Debug-App "note-app-port-8082" always;
 
