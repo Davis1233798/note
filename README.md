@@ -33,17 +33,19 @@
 
 #### Step 3：取得 SUPABASE_URL 和 SUPABASE_ANON_KEY
 
+**取得 Project URL（`VITE_SUPABASE_URL`）：**
 1. 進入你的專案 Dashboard
 2. 點擊左側選單 **「Project Settings」**（齒輪圖示 ⚙️）
-3. 點擊 **「API」** 分頁
-4. 在頁面中找到：
+3. 點擊 **「General」** 分頁
+4. 在 **「Project URL」** 區塊找到，格式為 `https://xxxxxxx.supabase.co`
+5. 也可以直接看瀏覽器網址列：`https://supabase.com/dashboard/project/xxxxxxx`，其中 `xxxxxxx` 就是你的 project id，完整 URL 為 `https://xxxxxxx.supabase.co`
 
-| 欄位 | 對應的值 | 範例 |
-|------|---------|------|
-| **Project URL** | → `VITE_SUPABASE_URL` | `https://abcdefg.supabase.co` |
-| **Project API keys → anon public** | → `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIs...` |
+**取得 anon public key（`VITE_SUPABASE_ANON_KEY`）：**
+1. 同樣在 **「Project Settings」** → **「API」** 分頁
+2. 切換到 **「Legacy anon, service_role API keys」** 標籤頁
+3. 複製 **anon public** 那一行的 key（以 `eyJ` 開頭的長字串）
 
-> ⚠️ 注意：要複製的是 **anon public** 那個 key，不是 **service_role** key
+> ⚠️ 注意：要複製的是 **anon public** 那個 key，**不是** service_role key
 
 ---
 
