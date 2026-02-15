@@ -113,12 +113,40 @@ jobs:
             fi
 
             # 每次都更新 service 和 nginx 設定
-            # 先轉換 Windows CRLF → Unix LF（避免 Nginx 解析失敗）
-            sudo sed -i 's/\r//g' $DEPLOY_SRC/deploy/nginx.conf
+            # 直接生成 nginx.conf 確保無 CRLF 問題且內容正確
+            echo "🔧 Generating nginx.conf..."
+            cat > $DEPLOY_SRC/deploy/nginx.conf <<EOF
+            server {
+                listen 80;
+                server_name sqlnote.dpdns.org;
+
+                add_header X-Debug-App "note-app-port-8082" always;
+
+                location / {
+                    proxy_pass http://127.0.0.1:8082;
+                    proxy_http_version 1.1;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                }
+
+                location /api/ {
+                    proxy_pass http://127.0.0.1:8082;
+                    proxy_http_version 1.1;
+                    proxy_set_header Host \$host;
+                    proxy_set_header X-Real-IP \$remote_addr;
+                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto \$scheme;
+                }
+            }
+            EOF
+            
+            # 使用 sed 確保 service 檔無 CRLF
             sudo sed -i 's/\r//g' $DEPLOY_SRC/deploy/note-app.service
 
             # Debug: 印出 Nginx 設定內容
-            echo "📄 Nginx Config Content:"
+            echo "📄 Generated Nginx Config Content:"
             cat $DEPLOY_SRC/deploy/nginx.conf
 
             sudo cp $DEPLOY_SRC/deploy/note-app.service /etc/systemd/system/

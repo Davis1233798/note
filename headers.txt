@@ -1,0 +1,97 @@
+﻿curl.exe :   % Total    % Received % Xferd  Average Speed   
+Time    Time     Time  Current
+位於 線路:1 字元:1
++ curl.exe -v -I https://sqlnote.dpdns.org/ > headers.txt 2>
+&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo          : NotSpecified: (  % Total    % 
+    ...  Time  Current:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+                                 Dload  Upload   Total   Spe
+nt    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--
+:-- --:--:--     0* Host sqlnote.dpdns.org:443 was resolved.
+* IPv6: 2606:4700:3032::6815:2285, 2606:4700:3031::ac43:a146
+* IPv4: 104.21.34.133, 172.67.161.70
+*   Trying 104.21.34.133:443...
+* Connected to sqlnote.dpdns.org (104.21.34.133) port 443
+* schannel: disabled automatic use of client certificate
+* ALPN: curl offers http/1.1
+* ALPN: server accepted http/1.1
+* using HTTP/1.x
+> HEAD / HTTP/1.1
+
+> Host: sqlnote.dpdns.org
+
+> User-Agent: curl/8.9.1
+
+> Accept: */*
+
+> 
+
+* Request completely sent off
+* schannel: remote party requests renegotiation
+* schannel: renegotiating SSL/TLS connection
+* schannel: SSL/TLS connection renegotiated
+< HTTP/1.1 200 OK
+
+< Date: Sun, 15 Feb 2026 14:58:47 GMT
+
+< Content-Type: text/html
+
+< Connection: keep-alive
+
+< Server: cloudflare
+
+< Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age
+":604800}
+
+< last-modified: Thu, 11 Dec 2025 17:13:46 GMT
+
+< Report-To: {"group":"cf-nel","max_age":604800,"endpoints":
+[{"url":"https://a.nel.cloudflare.com/report/v4?s=wcwBW5Uf2j
+ga9gPox7TvqD%2FgGG75Gdrle7cDmktO2rejbnAgVKYrKmp3Rsdk3meKzLzr
+PRQhFBgSVbvd2f04Qd5dGHufK6bzV71H4zfWwc97"}]}
+
+< x-frame-options: SAMEORIGIN
+
+< x-content-type-options: nosniff
+
+< x-xss-protection: 1; mode=block
+
+< referrer-policy: no-referrer-when-downgrade
+
+< Accept-Ranges: bytes
+
+< cf-cache-status: DYNAMIC
+
+< CF-RAY: 9ce5aa51bf81fd33-SIN
+
+< alt-svc: h3=":443"; ma=86400
+
+< 
+
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--
+:-- --:--:--     0
+* Connection #0 to host sqlnote.dpdns.org left intact
+HTTP/1.1 200 OK
+Date: Sun, 15 Feb 2026 14:58:47 GMT
+Content-Type: text/html
+Connection: keep-alive
+Server: cloudflare
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+last-modified: Thu, 11 Dec 2025 17:13:46 GMT
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=wcwBW5Uf2jga9gPox7TvqD%2FgGG75Gdrle7cDmktO2rejbnAgVKYrKmp3Rsdk3meKzLzrPRQhFBgSVbvd2f04Qd5dGHufK6bzV71H4zfWwc97"}]}
+x-frame-options: SAMEORIGIN
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+referrer-policy: no-referrer-when-downgrade
+Accept-Ranges: bytes
+cf-cache-status: DYNAMIC
+CF-RAY: 9ce5aa51bf81fd33-SIN
+alt-svc: h3=":443"; ma=86400
+
