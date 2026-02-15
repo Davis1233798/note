@@ -158,7 +158,7 @@ export default function NotePage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 py-8">
             {/* Back button */}
             <button
                 onClick={() => navigate('/')}
@@ -264,8 +264,8 @@ export default function NotePage() {
                                     type="button"
                                     onClick={() => setNewIsCorrect(true)}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-medium transition-all ${newIsCorrect
-                                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                                            : 'bg-surface-800/30 border-surface-700/30 text-surface-400 hover:border-surface-600'
+                                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                                        : 'bg-surface-800/30 border-surface-700/30 text-surface-400 hover:border-surface-600'
                                         }`}
                                 >
                                     <CheckCircle2 size={18} /> 正確
@@ -274,8 +274,8 @@ export default function NotePage() {
                                     type="button"
                                     onClick={() => setNewIsCorrect(false)}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border font-medium transition-all ${!newIsCorrect
-                                            ? 'bg-red-500/15 border-red-500/40 text-red-400'
-                                            : 'bg-surface-800/30 border-surface-700/30 text-surface-400 hover:border-surface-600'
+                                        ? 'bg-red-500/15 border-red-500/40 text-red-400'
+                                        : 'bg-surface-800/30 border-surface-700/30 text-surface-400 hover:border-surface-600'
                                         }`}
                                 >
                                     <XCircle size={18} /> 錯誤
@@ -404,8 +404,8 @@ export default function NotePage() {
                                                         type="button"
                                                         onClick={() => setEditAttemptData({ ...editAttemptData, is_correct: true })}
                                                         className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm font-medium transition-all ${editAttemptData.is_correct
-                                                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                                                                : 'bg-surface-800/30 border-surface-700/30 text-surface-400'
+                                                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                                                            : 'bg-surface-800/30 border-surface-700/30 text-surface-400'
                                                             }`}
                                                     >
                                                         <CheckCircle2 size={16} /> 正確
@@ -414,8 +414,8 @@ export default function NotePage() {
                                                         type="button"
                                                         onClick={() => setEditAttemptData({ ...editAttemptData, is_correct: false })}
                                                         className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm font-medium transition-all ${!editAttemptData.is_correct
-                                                                ? 'bg-red-500/15 border-red-500/40 text-red-400'
-                                                                : 'bg-surface-800/30 border-surface-700/30 text-surface-400'
+                                                            ? 'bg-red-500/15 border-red-500/40 text-red-400'
+                                                            : 'bg-surface-800/30 border-surface-700/30 text-surface-400'
                                                             }`}
                                                     >
                                                         <XCircle size={16} /> 錯誤

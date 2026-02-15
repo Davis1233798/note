@@ -16,7 +16,7 @@ export default function Navbar() {
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
         }}>
-            <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10">
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-2.5 group">
@@ -33,8 +33,8 @@ export default function Navbar() {
                         <Link
                             to="/"
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive('/')
-                                    ? 'bg-primary-500/15 text-primary-300'
-                                    : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800/50'
+                                ? 'bg-primary-500/15 text-primary-300'
+                                : 'text-surface-400 hover:text-surface-200 hover:bg-surface-800/50'
                                 }`}
                         >
                             <LayoutDashboard size={16} />
