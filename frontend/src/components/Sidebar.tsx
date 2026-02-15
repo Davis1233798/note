@@ -6,7 +6,6 @@ import {
     BookOpen,
     Settings,
     LogOut,
-    Menu,
     X,
     ChevronLeft,
     ChevronRight

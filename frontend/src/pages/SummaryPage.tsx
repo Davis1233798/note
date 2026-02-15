@@ -8,8 +8,6 @@ import {
     ExternalLink,
     Trash2,
     Search,
-    AlertTriangle,
-    CheckCircle2,
     XCircle,
     Settings,
     TrendingUp,
@@ -64,7 +62,7 @@ export default function SummaryPage() {
     const totalAttempts = notes.reduce((sum, n) => sum + n.attempts.length, 0);
     const totalCorrect = notes.reduce((sum, n) => sum + n.attempts.filter(a => a.is_correct).length, 0);
     const successRate = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
-    const recentNotes = notes.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 5);
+
 
     const filteredNotes = notes.filter(
         n => n.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -175,7 +173,6 @@ export default function SummaryPage() {
                                 </tr>
                             ) : (
                                 filteredNotes.map(note => {
-                                    const lastAttempt = note.attempts[note.attempts.length - 1];
                                     const correctCount = note.attempts.filter(a => a.is_correct).length;
                                     return (
                                         <tr key={note.id} className="hover:bg-surface-800/30 transition-colors group">
