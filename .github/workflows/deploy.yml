@@ -115,11 +115,26 @@ jobs:
               sudo systemctl daemon-reload
               sudo systemctl enable note-app
               sudo nginx -t && sudo systemctl reload nginx
+            else
+              # 更新 service / nginx 設定（如有變更）
+              sudo cp $DEPLOY_SRC/deploy/note-app.service /etc/systemd/system/
+              sudo cp $DEPLOY_SRC/deploy/nginx.conf /etc/nginx/sites-available/note-app
+              sudo systemctl daemon-reload
+              sudo nginx -t && sudo systemctl reload nginx
             fi
+
+            # 徹底停止舊服務
+            echo "🛑 Stopping old service..."
+            sudo systemctl stop note-app || true
+            sudo systemctl reset-failed note-app || true
+            sleep 1
+
+            # 殺掉仍佔用 port 8080 的 process
+            sudo fuser -k 8080/tcp 2>/dev/null || true
+            sleep 1
 
             # 部署新版本
             echo "🚀 Deploying..."
-            sudo systemctl stop note-app || true
             sudo cp $DEPLOY_SRC/backend $APP_DIR/backend
             sudo chmod +x $APP_DIR/backend
             sudo rm -rf $APP_DIR/static/*
@@ -133,12 +148,13 @@ jobs:
             sudo systemctl start note-app
 
             # 等待服務啟動並檢查
-            sleep 2
+            sleep 3
             if sudo systemctl is-active --quiet note-app; then
               echo "✅ Deployment successful!"
+              curl -sf http://localhost:8080/api/health && echo " - Health check passed" || true
             else
               echo "❌ Service failed to start"
-              sudo journalctl -u note-app --no-pager -n 20
+              sudo journalctl -u note-app --no-pager -n 30
               exit 1
             fi
 
