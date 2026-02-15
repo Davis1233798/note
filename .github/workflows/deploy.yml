@@ -118,6 +118,7 @@ jobs:
             cat > $DEPLOY_SRC/deploy/nginx.conf <<EOF
             server {
                 listen 80;
+                listen [::]:80;
                 server_name sqlnote.dpdns.org;
 
                 add_header X-Debug-App "note-app-port-8082" always;
